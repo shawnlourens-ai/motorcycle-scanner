@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Motorcycle Entry</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ZXing -->
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
+<!-- EmailJS -->
+<script src="https://cdn.emailjs.com/sdk/3.2/email.min.js"></script>
+
+<style>
+body { font-family: Arial, sans-serif; background:#f4f4f4; }
+.card { display:none; padding:20px; background:#fff; margin:20px auto; max-width:400px; border-radius:8px; }
+.card.active { display:block; }
+button { padding:10px; width:100%; margin-top:10px; }
+input { width:100%; padding:8px; margin-top:6px; }
+</style>
+</head>
+
+<body>
+
+<!-- CARD 1 -->
+<div class="card active" id="card1">
+  <h2>Scan Vehicle Barcode</h2>
+  <video id="video" width="100%"></video>
+  <input type="text" id="vehicleReg" placeholder="Vehicle Reg" readonly>
+  <input type="number" id="motorcycles" placeholder="Number of motorcycles">
+  <p>Total: R<span id="total">0</span></p>
+  <button onclick="nextCard(2)">Next</button>
+</div>
+
+<!-- CARD 2 -->
+<div class="card" id="card2">
+  <h2>Total due: R<span id="total2"></span></h2>
+  <input type="text" id="name" placeholder="Name">
+  <input type="text" id="surname" placeholder="Surname">
+  <input type="tel" id="phone" placeholder="Telephone">
+  <button onclick="nextCard(3)">Next</button>
+</div>
+
+<!-- CARD 3 -->
+<div class="card" id="card3">
+  <label>
+    <input type="checkbox" id="paid"> Payment received
+  </label>
+  <button onclick="complete()">Complete</button>
+</div>
+
+<script>
+emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+
+let scannedData = "";
+let latitude = "";
+let longitude = "";
+
+navigator.geolocation.getCurrentPosition(pos => {
+  latitude = pos.coords.latitude;
+  longitude = pos.coords.longitude;
+});
+
+const codeReader = new ZXing.BrowserPDF417Reader();
+
+codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+  if (result) {
+    scannedData = result.text;
+    const parts = scannedData.split("%");
+    if (parts.length >= 7) {
+      document.getElementById("vehicleReg").value = parts[6];
+    }
+    codeReader.reset();
+  }
+});
+
+document.getElementById("motorcycles").addEventListener("input", e => {
+  const total = (parseInt(e.target.value) || 0) * 150;
+  document.getElementById("total").innerText = total;
+});
+
+function nextCard(n) {
+  document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+  document.getElementById("card"+n).classList.add("active");
+  document.getElementById("total2").innerText = document.getElementById("total").innerText;
+}
+
+function complete() {
+  if (!document.getElementById("paid").checked) {
+    alert("Please confirm payment received.");
+    return;
+  }
+
+  emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+    vehicle_reg: document.getElementById("vehicleReg").value,
+    motorcycles: document.getElementById("motorcycles").value,
+    total: document.getElementById("total").innerText,
+    name: document.getElementById("name").value,
+    surname: document.getElementById("surname").value,
+    phone: document.getElementById("phone").value,
+    lat: latitude,
+    lng: longitude,
+    date: new Date().toLocaleString()
+  }).then(() => {
+    location.reload();
+  });
+}
+</script>
+
+</body>
+</html>
