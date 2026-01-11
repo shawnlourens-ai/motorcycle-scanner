@@ -67,7 +67,7 @@ p.fallback { color:red; font-size:0.9em; }
 /* ======================
    CONFIG: EmailJS
 ====================== */
-emailjs.init("YOUR_PUBLIC_KEY"); // <-- replace with your EmailJS public key
+emailjs.init("1fovTEqPOuwgcomem"); // <-- replace with your EmailJS public key
 
 /* ======================
    GLOBAL VARIABLES
@@ -180,7 +180,7 @@ function complete() {
     return;
   }
 
-  emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+  emailjs.send("service_b3o7uon", "template_se4lmxj", {
     vehicle_reg: document.getElementById("vehicleReg").value,
     motorcycles: document.getElementById("motorcycles").value,
     total: document.getElementById("total").innerText,
