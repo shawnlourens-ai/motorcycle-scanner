@@ -5,55 +5,22 @@
 <title>Motorcycle Entry</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- ZXing PDF417 Barcode Scanner -->
+<!-- ZXing PDF417 -->
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <!-- EmailJS SDK -->
 <script src="https://cdn.emailjs.com/sdk/3.2/email.min.js"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background:#f4f4f4;
-  margin:0;
-  padding:0;
-}
-.card {
-  display:none;
-  padding:20px;
-  background:#fff;
-  margin:20px auto;
-  max-width:420px;
-  border-radius:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
-}
+body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
+.card { display:none; padding:20px; background:#fff; margin:20px auto; max-width:420px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
 .card.active { display:block; }
-button {
-  padding:12px;
-  width:100%;
-  margin-top:12px;
-  font-size:16px;
-  border:none;
-  background:#007bff;
-  color:#fff;
-  border-radius:5px;
-  cursor:pointer;
-}
+button { padding:12px; width:100%; margin-top:12px; font-size:16px; border:none; background:#007bff; color:#fff; border-radius:5px; cursor:pointer; }
 button:hover { background:#0056b3; }
-input {
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  font-size:16px;
-  border-radius:5px;
-  border:1px solid #ccc;
-}
-video {
-  width:100%;
-  margin-top:10px;
-  border-radius:8px;
-}
+input { width:100%; padding:10px; margin-top:8px; font-size:16px; border-radius:5px; border:1px solid #ccc; }
+video { width:100%; margin-top:10px; border-radius:8px; }
 .hidden { display:none; }
+p.fallback { color:red; font-size:0.9em; }
 </style>
 </head>
 
@@ -63,12 +30,14 @@ video {
 <div class="card active" id="card1">
   <h2>Vehicle Entry</h2>
 
+  <p class="fallback">iPhone users: please use Safari for scanning. If scanning fails, enter Vehicle Reg manually.</p>
+
   <button type="button" id="scanButton">📷 Scan Reg</button>
   <video id="video" class="hidden" playsinline></video>
 
-  <input type="text" id="vehicleReg" placeholder="Vehicle Reg" readonly>
-  <input type="number" id="motorcycles" placeholder="Number of motorcycles">
+  <input type="text" id="vehicleReg" placeholder="Vehicle Reg (scan or manual entry)">
 
+  <input type="number" id="motorcycles" placeholder="Number of motorcycles">
   <p><strong>Total:</strong> R<span id="total">0</span></p>
 
   <button type="button" onclick="nextCard(2)">Next</button>
@@ -117,7 +86,7 @@ navigator.geolocation.getCurrentPosition(pos => {
 });
 
 /* ======================
-   START SCAN (iOS-Compatible)
+   START SCAN (iOS-compatible)
 ====================== */
 document.getElementById("scanButton").addEventListener("click", async function() {
   if (scanning) return;
@@ -128,29 +97,33 @@ document.getElementById("scanButton").addEventListener("click", async function()
   scanning = true;
 
   try {
-    // Request rear camera
+    // Use environment camera
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: "environment" } }
+      video: { facingMode: "environment" }
     });
+
     video.srcObject = stream;
     await video.play();
 
     codeReader = new ZXing.BrowserPDF417Reader();
 
-    codeReader.decodeFromVideoDevice(null, video, (result, err) => {
-      if (result) {
-        handleScan(result.text);
+    // Use decodeFromVideoElement (more compatible with iOS Safari)
+    codeReader.decodeFromVideoElement(video).then(result => {
+      handleScan(result.text);
 
-        // Stop the camera
-        stream.getTracks().forEach(track => track.stop());
-      }
+      // Stop camera after successful scan
+      stream.getTracks().forEach(track => track.stop());
+    }).catch(err => {
+      console.error("Scan failed: ", err);
+      alert("Scanning failed. Please enter Vehicle Reg manually.");
+      stopScan();
     });
 
-  } catch (e) {
-    alert("Camera access failed. Make sure you are using Safari or Chrome on iOS and that HTTPS is enabled.");
+  } catch (err) {
+    console.error("Camera access failed:", err);
+    alert("Camera access failed. Please enter Vehicle Reg manually.");
     scanning = false;
     video.classList.add("hidden");
-    console.error(e);
   }
 });
 
@@ -160,7 +133,7 @@ document.getElementById("scanButton").addEventListener("click", async function()
 function handleScan(text) {
   const parts = text.split("%");
   if (parts.length < 7) {
-    alert("Invalid barcode format");
+    alert("Invalid barcode format. Please enter Vehicle Reg manually.");
     stopScan();
     return;
   }
@@ -172,9 +145,7 @@ function handleScan(text) {
    STOP SCAN
 ====================== */
 function stopScan() {
-  if (codeReader) {
-    codeReader.reset();
-  }
+  if (codeReader) codeReader.reset();
   scanning = false;
   document.getElementById("video").classList.add("hidden");
 }
